@@ -233,8 +233,8 @@ src/
 
 - [x] **Phase 1** — Physics board, ball launcher, pin field, dial input
 - [x] **Phase 2** — Gates, pockets, digital lottery, game state machine, ball economy
-- [ ] **Phase 3** — Kakuhen (fever mode), jitan, koatari, full state machine
-- [ ] **Phase 4** — Statistics dashboard, probability charts, RNG transparency mode
+- [x] **Phase 3** — Kakuhen (fever mode), jitan, koatari, full state machine
+- [x] **Phase 4** — History view, analysis dashboard, heatmap, RNG transparency
 - [ ] **Phase 5** — Themes (Classic Gold, Neon Drift), audio, accessibility, responsive layout
 
 ---

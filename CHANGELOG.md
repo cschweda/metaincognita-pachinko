@@ -2,6 +2,59 @@
 
 All notable changes to PachinkoParlor are documented here.
 
+## [0.4.0] - 2026-04-05
+
+### Phase 4: Stats, History & Analysis
+
+The educational layer — exposing the mathematics that pachinko's sensory design is built to hide.
+
+#### Added
+- **History view** — full event log table with color-coded rows (gold for jackpots, teal for mode changes). Filterable by All / Spins / Jackpots / Modes. CSV export for offline analysis.
+- **Analysis view** — SVG chart dashboard with six panels:
+  - Probability convergence (actual jackpot rate vs theoretical 1/319 — the law of large numbers in real time)
+  - Net position over time (sawtooth pattern of losses punctuated by fever spikes)
+  - Mode time distribution (bar chart showing % time in Normal / Spinning / Payout / Fever / Jitan)
+  - Reach type breakdown (None / Normal / Super / Premium with counts and percentages)
+  - Fever chain length histogram (distribution of consecutive kakuhen jackpots)
+  - Key insight card: "Your dial determines where 15-25% of balls land. The RNG determines 100% of jackpot outcomes."
+- **History log** — records all session events (spins, jackpots, mode changes, purchases) with timestamps. Supports filtering and CSV export.
+- **Session tracker** — collects per-spin data points for chart rendering. Tracks mode time distribution, reach breakdown, and fever chain lengths.
+- **Ball path heatmap** — samples ball positions every 5th frame into an 80x100 grid. Renders as semi-transparent color overlay (cold blue → hot red) on the Phaser canvas every 30th frame. Togglable from the stats panel.
+- **RNG transparency mode** — toggle in the stats panel reveals the predetermined outcome before the lottery animation plays. Shows "Next: JACKPOT (full)" or "Next: NO JACKPOT (super reach)". The core educational insight: the spinning reels are theater — the RNG already decided.
+- **Overlay toggles** — heatmap and RNG transparency checkboxes in the stats column.
+- **History and Analysis tabs** enabled in top bar navigation (were previously disabled stubs).
+
+#### Changed
+- All chart rendering uses inline SVG (no Chart.js dependency yet — pure DOM per ADR-002).
+
+---
+
+## [0.3.0] - 2026-04-05
+
+### Phase 3: Kakuhen, Jitan & Full State Machine
+
+The complete mode system that gives pachinko its dramatic arc — fever mode, chain jackpots, fast-cycle recovery.
+
+#### Added
+- **KakuhenController** — fever mode with 10x odds boost (1/31.9 effective), 100-spin limit, chain depth tracking. 65% probability that any jackpot triggers kakuhen.
+- **JitanController** — fast-cycle mode with 2.5x animation speed, 100-spin countdown, normal odds (1/319). Widened chakker acceptance.
+- **Full state machine rewrite** — complete state graph: IDLE → NORMAL → SPINNING → PAYOUT → KAKUHEN or JITAN → ... Chain jackpots: KAKUHEN → jackpot → PAYOUT → KAKUHEN (chains). Kakuhen exhaustion → JITAN. Jitan exhaustion → NORMAL.
+- **Odds multiplier** — LotteryEngine accepts multiplier during kakuhen spins.
+- **Jitan animation speed** — LotteryDisplay accepts speed multiplier (2.5x faster reel resolution during jitan).
+- **Koatari brief gate timing** — gate opens for only 800ms per koatari round (vs 8s for full jackpot).
+- **Visual mode overlay** — pulsing red/gold border during FEVER, blue border during JITAN, gold border during PAYOUT.
+- **Mode detail panels** in stats column: FEVER shows odds/spins remaining/chain depth. TIME shows spins remaining/speed multiplier.
+- **Contextual hints** for fever ("FEVER MODE! Odds boosted 10x") and jitan ("TIME mode — fast spins, keep firing!").
+- **Linked tulip gates** — entering tulip 0 also toggles tulip 2 (left pair chain), entering tulip 1 toggles tulip 3 (right pair chain).
+- **Minor payout side pockets** — 3-ball award at hard-to-reach positions on left/right edges.
+
+### Tests
+- KakuhenController: activation, chain depth increment, spin consumption, deactivation, kakuhen rate verification over 100K trials.
+- JitanController: activation, spin consumption, deactivation.
+- GameStateMachine: full cycle coverage (NORMAL → jackpot → PAYOUT → KAKUHEN/JITAN → back to NORMAL), invalid transition rejection, forceIdle.
+
+---
+
 ## [0.2.0] - 2026-04-05
 
 ### Phase 2: Gates, Pockets & Digital Lottery
