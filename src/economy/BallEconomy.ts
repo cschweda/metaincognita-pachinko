@@ -167,7 +167,7 @@ export class BallEconomy {
     return this.state;
   }
 
-  getStats(): Readonly<SessionStats> {
+  getStats(): SessionStats {
     // Update computed fields
     this.stats.sessionDuration = Date.now() - this.stats.sessionStartTime;
     this.stats.yenValue = Math.floor(this.state.ballsOwned * BALL_EXCHANGE_YEN);

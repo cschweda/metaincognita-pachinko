@@ -26,6 +26,13 @@ export interface SessionStats {
   sessionDuration: number;     // ms elapsed
   burnRate: number;            // balls lost per minute (rolling)
 
+  // Mode tracking
+  kakuhenOddsMultiplier?: number;
+  kakuhenSpinsRemaining?: number;
+  kakuhenChainDepth?: number;
+  jitanSpinsRemaining?: number;
+  jitanSpeedMultiplier?: number;
+
   // Lifetime (persisted across sessions)
   lifetimeSessions: number;
   lifetimeBallsPurchased: number;

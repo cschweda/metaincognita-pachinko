@@ -8,6 +8,7 @@ export class TulipGate {
   private y: number;
   private toggleTimer = 0;
   private onToggle: (isOpen: boolean) => void;
+  private linkedTulip: TulipGate | null = null;
 
   constructor(
     scene: Phaser.Scene,
@@ -47,9 +48,25 @@ export class TulipGate {
 
           this.isOpen = !this.isOpen;
           this.onToggle(this.isOpen);
+
+          // Trigger linked tulip (chain reaction)
+          if (this.linkedTulip) {
+            this.linkedTulip.forceToggle();
+          }
         }
       }
     });
+  }
+
+  /** Link this tulip to another — when this one toggles, the linked one also toggles. */
+  setLinkedTulip(tulip: TulipGate): void {
+    this.linkedTulip = tulip;
+  }
+
+  /** Force toggle without ball collision (used by linked tulips). */
+  forceToggle(): void {
+    this.isOpen = !this.isOpen;
+    this.onToggle(this.isOpen);
   }
 
   getIsOpen(): boolean {

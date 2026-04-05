@@ -41,6 +41,9 @@ export class BoardScene extends Phaser.Scene {
   private payoutRoundDuration = 0;
   private payoutBallsThisRound = 0;
 
+  // Mode visuals
+  private modeOverlay!: Phaser.GameObjects.Graphics;
+
   // FPS
   private fpsCounter = 0;
   private fpsTimer = 0;
@@ -92,6 +95,9 @@ export class BoardScene extends Phaser.Scene {
     // 5. Launcher dial (UI overlay, topmost)
     this.launcherDial = new LauncherDial(this, this.ballPool, this.economy);
 
+    // 6. Mode overlay (border glow for fever/jitan)
+    this.modeOverlay = this.add.graphics();
+
     // Start the game
     this.stateMachine.start();
 
@@ -117,10 +123,10 @@ export class BoardScene extends Phaser.Scene {
     // Award 3 balls per chakker entry (per spec)
     this.economy.awardChakkerPayout();
 
-    // Queue a lottery spin
-    const queued = this.lotteryEngine.queueSpin();
+    // Queue a lottery spin with current odds multiplier (10x during kakuhen)
+    const queued = this.lotteryEngine.queueSpin(this.stateMachine.getOddsMultiplier());
 
-    // If we're in NORMAL, transition to SPINNING
+    // Transition to SPINNING (works from NORMAL, KAKUHEN, or JITAN)
     this.stateMachine.onChakkerEntry();
 
     // If the display isn't currently animating, start the next spin
@@ -208,7 +214,6 @@ export class BoardScene extends Phaser.Scene {
   // ---- Tulip & pocket setup ----
 
   private createTulipGates(): void {
-    // Two tulips flanking the start chakker area
     const positions = [
       { x: 320, y: 610 },
       { x: 450, y: 610 },
@@ -219,25 +224,38 @@ export class BoardScene extends Phaser.Scene {
     for (const pos of positions) {
       const tulip = new TulipGate(this, pos.x, pos.y, (isOpen) => {
         if (isOpen) {
-          this.economy.awardBalls(5); // Tulip open bonus
+          this.economy.awardBalls(5);
         }
       });
       this.tulipGates.push(tulip);
     }
+
+    // Link tulips: left pair linked, right pair linked
+    // Entering tulip 0 (320,610) also toggles tulip 2 (250,700)
+    // Entering tulip 1 (450,610) also toggles tulip 3 (510,700)
+    if (this.tulipGates.length >= 4) {
+      this.tulipGates[0]!.setLinkedTulip(this.tulipGates[2]!);
+      this.tulipGates[1]!.setLinkedTulip(this.tulipGates[3]!);
+    }
   }
 
   private createSidePockets(): void {
-    // Dead pockets on both sides, lower third of board
     const pockets = [
+      // Dead pockets — ball drains, no reward
       { x: 32, y: 750, w: 20, h: 30, type: 'dead' as const, payout: 0 },
       { x: 700, y: 750, w: 20, h: 30, type: 'dead' as const, payout: 0 },
       { x: 32, y: 850, w: 20, h: 30, type: 'dead' as const, payout: 0 },
       { x: 700, y: 850, w: 20, h: 30, type: 'dead' as const, payout: 0 },
+      // Minor payout pockets — hard to reach, small reward
+      { x: 32, y: 650, w: 20, h: 25, type: 'minor' as const, payout: 3 },
+      { x: 700, y: 650, w: 20, h: 25, type: 'minor' as const, payout: 3 },
     ];
 
     for (const p of pockets) {
-      new SidePocket(this, p.x, p.y, p.w, p.h, p.type, p.payout, (_type, _payout) => {
-        // Dead pockets: ball is removed (handled by BallPool exit detection)
+      new SidePocket(this, p.x, p.y, p.w, p.h, p.type, p.payout, (type, payout) => {
+        if (type === 'minor' && payout > 0) {
+          this.economy.awardBalls(payout);
+        }
       });
     }
   }
@@ -269,6 +287,32 @@ export class BoardScene extends Phaser.Scene {
     }
   }
 
+  // ---- Mode visuals ----
+
+  private updateModeOverlay(): void {
+    this.modeOverlay.clear();
+    const state = this.stateMachine.getState();
+
+    if (state === GameState.KAKUHEN) {
+      // Fever mode — pulsing red/gold border glow
+      const pulse = 0.3 + Math.sin(Date.now() * 0.005) * 0.15;
+      this.modeOverlay.lineStyle(4, 0xff3333, pulse);
+      this.modeOverlay.strokeRect(30, 2, 700, 996);
+      this.modeOverlay.lineStyle(2, 0xffd700, pulse * 0.7);
+      this.modeOverlay.strokeRect(32, 4, 696, 992);
+    } else if (state === GameState.JITAN) {
+      // Jitan mode — subtle blue border pulse
+      const pulse = 0.2 + Math.sin(Date.now() * 0.004) * 0.1;
+      this.modeOverlay.lineStyle(3, 0x17a2b8, pulse);
+      this.modeOverlay.strokeRect(30, 2, 700, 996);
+    } else if (state === GameState.PAYOUT) {
+      // Payout — gold border
+      const pulse = 0.3 + Math.sin(Date.now() * 0.006) * 0.2;
+      this.modeOverlay.lineStyle(3, 0xffd700, pulse);
+      this.modeOverlay.strokeRect(30, 2, 700, 996);
+    }
+  }
+
   // ---- Update loop ----
 
   update(time: number, delta: number): void {
@@ -280,6 +324,9 @@ export class BoardScene extends Phaser.Scene {
     for (const tulip of this.tulipGates) {
       tulip.update();
     }
+
+    // Mode visual overlay
+    this.updateModeOverlay();
 
     // Payout round timer
     this.updatePayoutMode(delta);
@@ -295,9 +342,17 @@ export class BoardScene extends Phaser.Scene {
     if (this.fpsTimer >= 1000) {
       const fps = Math.round((this.fpsCounter / this.fpsTimer) * 1000);
       bridge.emit({ type: 'fps:updated', data: { fps } });
-      // Push session stats to DOM
+      // Push session stats to DOM, enriched with mode info
       bridge.emit({ type: 'economy:updated', data: this.economy.getState() });
-      bridge.emit({ type: 'stats:updated', data: this.economy.getStats() });
+      const stats = this.economy.getStats();
+      const kakuhen = this.stateMachine.getKakuhenController();
+      const jitan = this.stateMachine.getJitanController();
+      stats.kakuhenOddsMultiplier = kakuhen.getOddsMultiplier();
+      stats.kakuhenSpinsRemaining = kakuhen.getSpinsRemaining();
+      stats.kakuhenChainDepth = kakuhen.getChainDepth();
+      stats.jitanSpinsRemaining = jitan.getSpinsRemaining();
+      stats.jitanSpeedMultiplier = jitan.getAnimationSpeedMultiplier();
+      bridge.emit({ type: 'stats:updated', data: stats });
       this.fpsCounter = 0;
       this.fpsTimer = 0;
     }

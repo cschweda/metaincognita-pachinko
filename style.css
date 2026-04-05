@@ -565,6 +565,25 @@ main {
   color: var(--text-dim);
 }
 
+.hint-fever {
+  color: var(--red);
+  font-weight: 700;
+  animation: pulse-fever 1s ease-in-out infinite;
+}
+
+@keyframes pulse-fever {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.text-blue { color: var(--blue); }
+
+.mode-detail {
+  margin-top: 0.4rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--border);
+}
+
 .stats-hint kbd {
   background: var(--bg-input);
   border: 1px solid var(--border);

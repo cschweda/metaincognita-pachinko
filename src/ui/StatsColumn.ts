@@ -133,10 +133,34 @@ export class StatsColumn {
       <div class="stats-card" id="mode-card">
         <h3 class="stats-card-title">Mode</h3>
         <div class="mode-indicator" id="mode-indicator">NORMAL</div>
-        <div id="payout-info" style="display: none;">
+        <div id="payout-info" class="mode-detail" style="display: none;">
           <div class="stat-row">
             <span class="stat-label">Round</span>
             <span class="stat-value" id="stat-payout-round">-</span>
+          </div>
+        </div>
+        <div id="kakuhen-info" class="mode-detail" style="display: none;">
+          <div class="stat-row">
+            <span class="stat-label">Odds</span>
+            <span class="stat-value text-red" id="stat-kakuhen-odds">-</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Spins left</span>
+            <span class="stat-value" id="stat-kakuhen-spins">-</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Chain depth</span>
+            <span class="stat-value text-gold" id="stat-chain-depth">-</span>
+          </div>
+        </div>
+        <div id="jitan-info" class="mode-detail" style="display: none;">
+          <div class="stat-row">
+            <span class="stat-label">Spins left</span>
+            <span class="stat-value" id="stat-jitan-spins">-</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Speed</span>
+            <span class="stat-value text-blue" id="stat-jitan-speed">-</span>
           </div>
         </div>
       </div>
@@ -339,18 +363,33 @@ export class StatsColumn {
     // Mode
     const modeEl = this.container.querySelector('#mode-indicator') as HTMLElement | null;
     if (modeEl) {
-      modeEl.textContent = this.currentMode;
+      let modeLabel = this.currentMode;
+      if (this.currentMode === 'KAKUHEN') modeLabel = 'FEVER';
+      if (this.currentMode === 'JITAN') modeLabel = 'TIME';
+      modeEl.textContent = modeLabel;
       modeEl.className = `mode-indicator mode-${this.currentMode.toLowerCase()}`;
     }
 
+    // Mode detail panels — show/hide based on current mode
     const payoutInfo = this.container.querySelector('#payout-info') as HTMLElement | null;
-    if (payoutInfo) {
-      if (this.currentMode === 'PAYOUT') {
-        payoutInfo.style.display = 'block';
-        set('stat-payout-round', `${this.payoutRound} / ${this.payoutTotal}`);
-      } else {
-        payoutInfo.style.display = 'none';
-      }
+    const kakuhenInfo = this.container.querySelector('#kakuhen-info') as HTMLElement | null;
+    const jitanInfo = this.container.querySelector('#jitan-info') as HTMLElement | null;
+
+    if (payoutInfo) payoutInfo.style.display = this.currentMode === 'PAYOUT' ? 'block' : 'none';
+    if (kakuhenInfo) kakuhenInfo.style.display = this.currentMode === 'KAKUHEN' ? 'block' : 'none';
+    if (jitanInfo) jitanInfo.style.display = this.currentMode === 'JITAN' ? 'block' : 'none';
+
+    if (this.currentMode === 'PAYOUT') {
+      set('stat-payout-round', `${this.payoutRound} / ${this.payoutTotal}`);
+    }
+    if (this.currentMode === 'KAKUHEN' && this.stats.kakuhenOddsMultiplier) {
+      set('stat-kakuhen-odds', `1/${Math.round(319 / (this.stats.kakuhenOddsMultiplier ?? 10))}`);
+      set('stat-kakuhen-spins', String(this.stats.kakuhenSpinsRemaining ?? '-'));
+      set('stat-chain-depth', `×${this.stats.kakuhenChainDepth ?? 1}`);
+    }
+    if (this.currentMode === 'JITAN') {
+      set('stat-jitan-spins', String(this.stats.jitanSpinsRemaining ?? '-'));
+      set('stat-jitan-speed', `${this.stats.jitanSpeedMultiplier ?? 2.5}×`);
     }
 
     // Spin display
@@ -450,6 +489,11 @@ export class StatsColumn {
           : '<span class="hint-alert">No balls or balance remaining</span>';
       } else if (this.currentMode === 'PAYOUT') {
         hintEl.innerHTML = '<span class="hint-action">Aim balls at the payout gate!</span>';
+      } else if (this.currentMode === 'KAKUHEN') {
+        const chain = this.stats.kakuhenChainDepth ?? 1;
+        hintEl.innerHTML = `<span class="hint-fever">FEVER MODE! Odds boosted 10x ${chain > 1 ? `(chain x${chain})` : ''}</span>`;
+      } else if (this.currentMode === 'JITAN') {
+        hintEl.innerHTML = '<span class="hint-action">TIME mode — fast spins, keep firing!</span>';
       } else if (this.dialPower <= 0) {
         hintEl.innerHTML = '<span class="hint-action">Press <kbd>&rarr;</kbd> to set dial power</span>';
       } else if (this.dialPower <= 0.2) {
