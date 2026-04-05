@@ -21,6 +21,7 @@ export class StatsColumn {
 
   // Economy stats (updated via bridge)
   private stats: Partial<SessionStats> = {};
+  private rngTransparency = false;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -65,6 +66,23 @@ export class StatsColumn {
       this.lastSpinResult = data as SpinResult;
       this.spinLog.unshift(this.lastSpinResult);
       if (this.spinLog.length > 10) this.spinLog.pop();
+
+      // RNG transparency: show predetermined outcome
+      if (this.rngTransparency) {
+        const rngEl = this.container.querySelector('#rng-preview') as HTMLElement | null;
+        if (rngEl) {
+          rngEl.style.display = 'block';
+          const r = this.lastSpinResult;
+          if (r.isJackpot) {
+            rngEl.innerHTML = `<span class="rng-jackpot">Next: JACKPOT (${r.jackpotType})</span>`;
+          } else if (r.reachType !== 'none') {
+            rngEl.innerHTML = `<span class="rng-reach">Next: NO JACKPOT (${r.reachType} reach)</span>`;
+          } else {
+            rngEl.innerHTML = `<span class="rng-miss">Next: NO JACKPOT</span>`;
+          }
+        }
+      }
+
       this.update();
     });
 
@@ -246,6 +264,22 @@ export class StatsColumn {
         </div>
       </div>
 
+      <!-- Toggles -->
+      <div class="stats-card">
+        <h3 class="stats-card-title">Overlays</h3>
+        <div class="toggle-row">
+          <label class="toggle-label">
+            <input type="checkbox" id="toggle-heatmap"> Ball path heatmap
+          </label>
+        </div>
+        <div class="toggle-row">
+          <label class="toggle-label">
+            <input type="checkbox" id="toggle-rng"> RNG transparency
+          </label>
+        </div>
+        <div id="rng-preview" class="rng-preview" style="display: none;"></div>
+      </div>
+
       <!-- Launcher -->
       <div class="stats-card">
         <h3 class="stats-card-title">Launcher</h3>
@@ -299,6 +333,16 @@ export class StatsColumn {
     // Cash out
     this.container.querySelector('#btn-cashout')?.addEventListener('click', () => {
       bridge.emit({ type: 'economy:cashout' });
+    });
+
+    // Heatmap toggle
+    this.container.querySelector('#toggle-heatmap')?.addEventListener('change', () => {
+      bridge.emit({ type: 'toggle:heatmap' });
+    });
+
+    // RNG transparency toggle
+    this.container.querySelector('#toggle-rng')?.addEventListener('change', (e) => {
+      this.rngTransparency = (e.target as HTMLInputElement).checked;
     });
 
     // Speed buttons

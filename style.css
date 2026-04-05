@@ -693,6 +693,273 @@ main {
   margin-bottom: 0.5rem;
 }
 
+/* ---- Phase 4: Toggles, History, Analysis ---- */
+.toggle-row {
+  padding: 0.2rem 0;
+}
+
+.toggle-label {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+}
+
+.toggle-label input[type="checkbox"] {
+  accent-color: var(--teal);
+}
+
+.rng-preview {
+  margin-top: 0.4rem;
+  padding: 0.3rem 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-dark);
+  border: 1px solid var(--border);
+}
+
+.rng-jackpot { color: var(--gold); font-weight: 700; }
+.rng-reach { color: var(--teal); }
+.rng-miss { color: var(--text-muted); }
+
+/* History page */
+.history-page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  overflow: hidden;
+}
+
+.history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.history-header h2 {
+  color: var(--text);
+  font-size: 1.2rem;
+}
+
+.history-controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.filter-buttons {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.filter-btn {
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  padding: 0.3rem 0.6rem;
+  font-size: 0.75rem;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.filter-btn.active {
+  background: var(--bg-dark);
+  border-color: var(--gold-dim);
+  color: var(--gold);
+}
+
+.btn-export {
+  background: var(--bg-input);
+  color: var(--teal);
+  border-color: var(--teal-dim);
+}
+
+.btn-export:hover {
+  background: rgba(78, 205, 196, 0.1);
+}
+
+.history-table-wrap {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.history-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.history-table th {
+  text-align: left;
+  padding: 0.4rem 0.6rem;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  position: sticky;
+  top: 0;
+  background: var(--bg-dark);
+}
+
+.history-table td {
+  padding: 0.35rem 0.6rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-dim);
+}
+
+.history-table .mono {
+  font-family: var(--font-mono);
+}
+
+.row-jackpot td {
+  color: var(--gold) !important;
+  background: rgba(255, 215, 0, 0.05);
+}
+
+.row-mode td {
+  color: var(--teal) !important;
+}
+
+.row-reach td {
+  color: var(--text) !important;
+}
+
+.history-footer {
+  padding: 0.5rem 0;
+  font-size: 0.75rem;
+  text-align: right;
+}
+
+/* Analysis page */
+.analysis-page {
+  padding: 1rem;
+  overflow-y: auto;
+  height: 100%;
+}
+
+.analysis-page h2 {
+  color: var(--text);
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+}
+
+.analysis-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: 0.75rem;
+}
+
+.analysis-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem;
+}
+
+.chart-area {
+  min-height: 60px;
+}
+
+.chart-svg {
+  width: 100%;
+  height: auto;
+}
+
+.chart-caption {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.4rem;
+}
+
+.mode-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.2rem 0;
+}
+
+.mode-bar-label {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  min-width: 55px;
+}
+
+.mode-bar-track {
+  flex: 1;
+  height: 8px;
+  background: var(--bg-input);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.mode-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+
+.mode-bar-pct {
+  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  color: var(--text-dim);
+  min-width: 60px;
+  text-align: right;
+}
+
+.chain-histogram {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 80px;
+  padding: 0 0.5rem;
+}
+
+.chain-bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  justify-content: flex-end;
+}
+
+.chain-bar {
+  width: 100%;
+  max-width: 30px;
+  background: var(--gold);
+  border-radius: 2px 2px 0 0;
+  min-height: 2px;
+}
+
+.chain-label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.insight-card {
+  border-color: var(--gold-dim);
+}
+
+.insight-text {
+  font-size: 0.9rem;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.insight-sub {
+  margin-top: 0.3rem;
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
 /* ---- Responsive ---- */
 @media (max-width: 999px) {
   .game-layout {

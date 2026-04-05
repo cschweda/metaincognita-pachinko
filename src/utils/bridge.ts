@@ -18,7 +18,9 @@ export type GameEvent =
   | { type: 'economy:purchase' }
   | { type: 'economy:cashout' }
   | { type: 'economy:cashout:result'; data: { value: number } }
-  | { type: 'stats:updated'; data: unknown };
+  | { type: 'stats:updated'; data: unknown }
+  | { type: 'toggle:heatmap' }
+  | { type: 'toggle:rng-transparency' };
 
 type EventType = GameEvent['type'];
 type EventCallback = (data?: unknown) => void;

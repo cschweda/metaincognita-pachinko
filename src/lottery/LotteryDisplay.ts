@@ -260,7 +260,8 @@ export class LotteryDisplay {
 
   // ---- Spin control ----
 
-  startSpin(result: SpinResult, onComplete: () => void): void {
+  /** Start spinning. speedMultiplier > 1 makes reels resolve faster (jitan mode). */
+  startSpin(result: SpinResult, onComplete: () => void, speedMultiplier = 1): void {
     this.currentResult = result;
     this.displayState = 'spinning';
     this.resolveCallback = onComplete;
@@ -268,11 +269,12 @@ export class LotteryDisplay {
     this.flashTimer = 0;
 
     const timing = getReachTiming(result.reachType);
+    const s = speedMultiplier;
 
     this.reelStopTimes = [
-      this.spinStartTime + 800,
-      this.spinStartTime + 1400,
-      this.spinStartTime + timing.totalDuration,
+      this.spinStartTime + 800 / s,
+      this.spinStartTime + 1400 / s,
+      this.spinStartTime + timing.totalDuration / s,
     ];
 
     this.statusText.setText('');

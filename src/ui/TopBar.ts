@@ -20,8 +20,8 @@ export class TopBar {
         </div>
         <nav class="top-bar-tabs">
           <button class="tab-btn" data-tab="game">Game</button>
-          <button class="tab-btn" data-tab="history" disabled>History</button>
-          <button class="tab-btn" data-tab="analysis" disabled>Analysis</button>
+          <button class="tab-btn" data-tab="history">History</button>
+          <button class="tab-btn" data-tab="analysis">Analysis</button>
         </nav>
       </div>
     `;

@@ -9,6 +9,7 @@ import { LotteryEngine } from '../lottery/LotteryEngine';
 import { LotteryDisplay } from '../lottery/LotteryDisplay';
 import { GameStateMachine } from '../state/GameStateMachine';
 import { BallEconomy } from '../economy/BallEconomy';
+import { HeatmapTracker } from '../stats/HeatmapTracker';
 import { GameState } from '../types/state';
 import { bridge } from '../utils/bridge';
 import { PIN_RADIUS, BOARD_WIDTH, BOARD_HEIGHT } from '../utils/constants';
@@ -35,11 +36,13 @@ export class BoardScene extends Phaser.Scene {
   private lotteryDisplay!: LotteryDisplay;
   private stateMachine!: GameStateMachine;
   private economy!: BallEconomy;
+  private heatmapTracker!: HeatmapTracker;
 
   // Payout tracking
   private payoutRoundTimer = 0;
   private payoutRoundDuration = 0;
   private payoutBallsThisRound = 0;
+  private isKoatariPayout = false;
 
   // Mode visuals
   private modeOverlay!: Phaser.GameObjects.Graphics;
@@ -98,6 +101,9 @@ export class BoardScene extends Phaser.Scene {
     // 6. Mode overlay (border glow for fever/jitan)
     this.modeOverlay = this.add.graphics();
 
+    // 7. Heatmap tracker (Phaser overlay for ball paths)
+    this.heatmapTracker = new HeatmapTracker(this);
+
     // Start the game
     this.stateMachine.start();
 
@@ -114,6 +120,10 @@ export class BoardScene extends Phaser.Scene {
     bridge.on('economy:cashout', () => {
       const value = this.economy.cashOut();
       bridge.emit({ type: 'economy:cashout:result', data: { value } });
+    });
+
+    bridge.on('toggle:heatmap', () => {
+      this.heatmapTracker.toggle();
     });
   }
 
@@ -142,6 +152,7 @@ export class BoardScene extends Phaser.Scene {
     bridge.emit({ type: 'spin:result', data: result });
     this.economy.recordSpin(result.isJackpot, result.reachType !== 'none');
 
+    const speedMult = this.stateMachine.getAnimationSpeedMultiplier();
     this.lotteryDisplay.startSpin(result, () => {
       // Animation complete — resolve the spin
       this.onSpinAnimationComplete(result.isJackpot, result.jackpotType);
@@ -150,7 +161,7 @@ export class BoardScene extends Phaser.Scene {
       if (this.lotteryEngine.getQueueLength() > 0 && !this.lotteryDisplay.isAnimating()) {
         this.time.delayedCall(300, () => this.startNextSpin());
       }
-    });
+    }, speedMult);
   }
 
   private onSpinAnimationComplete(isJackpot: boolean, jackpotType?: string): void {
@@ -164,10 +175,20 @@ export class BoardScene extends Phaser.Scene {
   }
 
   private startPayoutMode(isKoatari: boolean): void {
+    this.isKoatariPayout = isKoatari;
     this.payoutGate.open();
     this.payoutRoundDuration = isKoatari ? KOATARI_ROUND_DURATION_MS : PAYOUT_ROUND_DURATION_MS;
     this.payoutRoundTimer = 0;
     this.payoutBallsThisRound = 0;
+
+    // Koatari: gate opens briefly then closes mid-round (narrow window)
+    if (isKoatari) {
+      this.time.delayedCall(800, () => {
+        if (this.stateMachine.getState() === GameState.PAYOUT && this.isKoatariPayout) {
+          this.payoutGate.close();
+        }
+      });
+    }
 
     bridge.emit({
       type: 'payout:round',
@@ -327,6 +348,9 @@ export class BoardScene extends Phaser.Scene {
 
     // Mode visual overlay
     this.updateModeOverlay();
+
+    // Heatmap ball position sampling
+    this.heatmapTracker.sample(this.ballPool.getActiveBalls());
 
     // Payout round timer
     this.updatePayoutMode(delta);
