@@ -91,7 +91,7 @@
   </g>
 
   <!-- "JACKPOT!" text under LCD -->
-  <text x="600" y="392" text-anchor="middle" font-family="'SF Mono', 'Fira Code', Consolas, monospace" font-size="14" font-weight="700" fill="#ffd700" letter-spacing="4" opacity="0.9">
+  <text x="600" y="410" text-anchor="middle" font-family="'SF Mono', 'Fira Code', Consolas, monospace" font-size="14" font-weight="700" fill="#ffd700" letter-spacing="4" opacity="0.9">
     JACKPOT!
   </text>
 
