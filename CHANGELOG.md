@@ -2,6 +2,30 @@
 
 All notable changes to PachinkoParlor are documented here.
 
+## [0.4.1] - 2026-07-09
+
+### Spin Lifecycle & Stats Wiring Fixes
+
+#### Fixed
+- **Queued spins are no longer dropped** — the state machine now transitions to SPINNING when a spin starts animating (new `onSpinStart`), not on chakker entry. Previously, spins that animated from the reserve queue resolved while the machine was in NORMAL/KAKUHEN/JITAN and their jackpots were silently ignored (no payout mode, no kakuhen roll). Spins queued during PAYOUT are now held — authentic hoju behavior — and resolve after the payout completes.
+- **Kakuhen/jitan spin counters** consume exactly one spin per started spin, including queued spins (previously queued spins skipped consumption).
+- **The stats panel no longer spoils live spins** — the Last Spin card, spin log, and spin/drought counters update when the reels stop, not when the animation starts. Previously a premium reach revealed its outcome in the side panel up to 8 seconds before the third reel landed. RNG transparency mode now listens to the new `spin:started` event and still reveals the predetermined outcome as the reels begin.
+- **Burn rate and cost/hour now work** — `ball:lost` is wired to `economy.lose()`. Previously nothing called `lose()`, so `ballsLost` stayed 0 and both stats showed `--` forever.
+- **Mouse wheel direction** — the wheel handler read Phaser's 5th event argument (`deltaZ`) as a `WheelEvent`, so both scroll directions increased power. Scrolling down now decreases power.
+- **Minor side pockets no longer double-award** — collision sensor labels are unique per pocket. Both minor pockets shared a label (as did all four dead pockets), so one ball entering either minor pocket fired both handlers and paid 6 balls instead of 3.
+- **Pool-exhaustion ball leak** — firing while all 30 pooled balls were in flight deducted a ball from the economy without spawning it. The launcher now checks pool capacity first.
+- **Phantom purchase history** — history logged "+250 balls" on the purchase *request*, even when the buy failed for insufficient balance. Purchases now log from the new `economy:purchase:result` event on success only.
+
+#### Added
+- `SpinCoordinator` — owns the queue → start → resolve spin lifecycle (extracted from BoardScene, fully unit-tested with a display fake mirroring LotteryDisplay's animate/hold contract).
+- `GameStateMachine` accepts optional kakuhen/jitan configs for deterministic tests.
+- Bridge events: `spin:started`, `economy:purchase:result`.
+
+#### Tests
+- 23 new tests (82 total): queued-spin regression suite, SpinCoordinator lifecycle (no-spoiler event ordering, payout hold, koatari rounds, reserve queue cap), kakuhen/jitan consumption, purchase-result events, phantom-purchase regression, wheel direction.
+
+---
+
 ## [0.4.0] - 2026-04-05
 
 ### Phase 4: Stats, History & Analysis

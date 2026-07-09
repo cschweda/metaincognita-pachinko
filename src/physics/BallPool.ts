@@ -54,6 +54,10 @@ export class BallPool {
     }
   }
 
+  hasCapacity(): boolean {
+    return this.pool.some(b => !b.active);
+  }
+
   spawn(x: number, y: number, velocityX: number, velocityY: number): MatterJS.BodyType | null {
     const slot = this.pool.find(b => !b.active);
     if (!slot) return null;

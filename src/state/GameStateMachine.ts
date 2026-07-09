@@ -1,6 +1,8 @@
 import { GameState } from '../types/state';
 import { KakuhenController } from './KakuhenController';
+import type { KakuhenConfig } from './KakuhenController';
 import { JitanController } from './JitanController';
+import type { JitanConfig } from './JitanController';
 import { bridge } from '../utils/bridge';
 
 type TransitionCallback = (from: GameState, to: GameState) => void;
@@ -26,9 +28,9 @@ export class GameStateMachine {
   // Track whether the current jackpot should trigger kakuhen (determined at spin time)
   private pendingKakuhen = false;
 
-  constructor() {
-    this.kakuhen = new KakuhenController();
-    this.jitan = new JitanController();
+  constructor(kakuhenConfig?: KakuhenConfig, jitanConfig?: JitanConfig) {
+    this.kakuhen = new KakuhenController(kakuhenConfig);
+    this.jitan = new JitanController(jitanConfig);
   }
 
   // Valid transitions for the full state graph
@@ -69,25 +71,27 @@ export class GameStateMachine {
     }
   }
 
-  /** Ball entered chakker — transition to SPINNING. Works from NORMAL, KAKUHEN, or JITAN. */
-  onChakkerEntry(): boolean {
-    if (this.currentState === GameState.NORMAL ||
-        this.currentState === GameState.KAKUHEN ||
-        this.currentState === GameState.JITAN) {
-      // Consume a spin counter if in a mode
-      if (this.currentState === GameState.KAKUHEN) {
-        this.kakuhen.consumeSpin();
-      } else if (this.currentState === GameState.JITAN) {
-        this.jitan.consumeSpin();
-      }
-      this.transition(GameState.SPINNING);
-      return true;
+  /**
+   * A queued spin is about to start animating. Consumes a mode spin
+   * (kakuhen/jitan) and transitions to SPINNING.
+   *
+   * Returns false when a spin cannot start now — payout in progress, game
+   * idle, or a spin already animating. The caller must leave the spin
+   * queued and retry after the blocking state ends, so that its outcome
+   * (including a jackpot) is never dropped.
+   */
+  onSpinStart(): boolean {
+    if (this.currentState !== GameState.NORMAL &&
+        this.currentState !== GameState.KAKUHEN &&
+        this.currentState !== GameState.JITAN) {
+      return false;
     }
-    // Already SPINNING — another ball entered chakker (queued spin)
-    if (this.currentState === GameState.SPINNING) {
-      return true;
+    if (this.currentState === GameState.KAKUHEN) {
+      this.kakuhen.consumeSpin();
+    } else if (this.currentState === GameState.JITAN) {
+      this.jitan.consumeSpin();
     }
-    return false;
+    return this.transition(GameState.SPINNING);
   }
 
   /** Get the current odds multiplier (10x during kakuhen, 1x otherwise). */

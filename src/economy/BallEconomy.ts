@@ -102,7 +102,10 @@ export class BallEconomy {
   /** Buy 250 balls for ¥1,000. Returns false if insufficient balance. */
   purchaseBalls(): boolean {
     const currentBalance = STARTING_BALANCE_YEN - this.stats.yenSpent;
-    if (currentBalance < PURCHASE_BATCH_COST) return false;
+    if (currentBalance < PURCHASE_BATCH_COST) {
+      bridge.emit({ type: 'economy:purchase:result', data: { success: false, balls: 0 } });
+      return false;
+    }
 
     this.state.ballsOwned += PURCHASE_BATCH_SIZE;
     this.stats.ballsPurchased += PURCHASE_BATCH_SIZE;
@@ -111,6 +114,7 @@ export class BallEconomy {
     this.stats.lifetimeYenSpent += PURCHASE_BATCH_COST;
 
     this.saveLifetime();
+    bridge.emit({ type: 'economy:purchase:result', data: { success: true, balls: PURCHASE_BATCH_SIZE } });
     this.emitUpdate();
     return true;
   }
