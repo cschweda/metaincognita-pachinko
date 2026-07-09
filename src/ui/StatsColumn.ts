@@ -1,6 +1,6 @@
 import { bridge } from '../utils/bridge';
 import type { SpinResult } from '../lottery/SpinResult';
-import type { BallEconomyState, SessionStats } from '../types/economy';
+import type { SessionStats } from '../types/economy';
 import { PURCHASE_BATCH_SIZE, PURCHASE_BATCH_COST, STARTING_BALANCE_YEN, BALL_EXCHANGE_YEN } from '../types/economy';
 
 export class StatsColumn {
@@ -31,8 +31,7 @@ export class StatsColumn {
   }
 
   private subscribe(): void {
-    bridge.on('economy:updated', (data) => {
-      const d = data as BallEconomyState;
+    bridge.on('economy:updated', (d) => {
       this.ballsOwned = d.ballsOwned;
       this.ballsWon = d.ballsWon;
       this.ballsInPlay = d.ballsInPlay;
@@ -41,8 +40,8 @@ export class StatsColumn {
       this.update();
     });
 
-    bridge.on('economy:ballsRemaining', (data) => {
-      this.ballsOwned = (data as { remaining: number }).remaining;
+    bridge.on('economy:ballsRemaining', (d) => {
+      this.ballsOwned = d.remaining;
       this.update();
     });
 
@@ -52,25 +51,24 @@ export class StatsColumn {
       this.flashCard('balls-card');
     });
 
-    bridge.on('fps:updated', (data) => {
-      this.fps = (data as { fps: number }).fps;
+    bridge.on('fps:updated', (d) => {
+      this.fps = d.fps;
       this.update();
     });
 
-    bridge.on('dial:changed', (data) => {
-      this.dialPower = (data as { power: number }).power;
+    bridge.on('dial:changed', (d) => {
+      this.dialPower = d.power;
       this.update();
     });
 
     // RNG transparency: reveal the predetermined outcome as the reels
     // begin to spin. The result card and spin log update on spin:result
     // (animation completion) so the default UI never spoils a live spin.
-    bridge.on('spin:started', (data) => {
+    bridge.on('spin:started', (r) => {
       if (!this.rngTransparency) return;
       const rngEl = this.container.querySelector('#rng-preview') as HTMLElement | null;
       if (!rngEl) return;
       rngEl.style.display = 'block';
-      const r = data as SpinResult;
       if (r.isJackpot) {
         rngEl.innerHTML = `<span class="rng-jackpot">Next: JACKPOT (${r.jackpotType})</span>`;
       } else if (r.reachType !== 'none') {
@@ -80,32 +78,30 @@ export class StatsColumn {
       }
     });
 
-    bridge.on('spin:result', (data) => {
-      this.lastSpinResult = data as SpinResult;
-      this.spinLog.unshift(this.lastSpinResult);
+    bridge.on('spin:result', (result) => {
+      this.lastSpinResult = result;
+      this.spinLog.unshift(result);
       if (this.spinLog.length > 10) this.spinLog.pop();
       this.update();
     });
 
-    bridge.on('mode:changed', (data) => {
-      this.currentMode = (data as { from: string; to: string }).to;
+    bridge.on('mode:changed', (d) => {
+      this.currentMode = d.to;
       this.update();
     });
 
-    bridge.on('payout:round', (data) => {
-      const d = data as { round: number; total: number };
+    bridge.on('payout:round', (d) => {
       this.payoutRound = d.round;
       this.payoutTotal = d.total;
       this.update();
     });
 
-    bridge.on('economy:cashout:result', (data) => {
-      const d = data as { value: number };
+    bridge.on('economy:cashout:result', (d) => {
       this.showCashoutResult(d.value);
     });
 
-    bridge.on('stats:updated', (data) => {
-      this.stats = data as SessionStats;
+    bridge.on('stats:updated', (stats) => {
+      this.stats = stats;
       this.update();
     });
   }

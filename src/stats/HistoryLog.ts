@@ -25,8 +25,7 @@ export class HistoryLog {
   }
 
   private subscribe(): void {
-    bridge.on('spin:result', (data) => {
-      const result = data as SpinResult;
+    bridge.on('spin:result', (result) => {
       const won = result.isJackpot ? 0 : 3; // chakker payout already awarded
       this.addEntry({
         eventType: result.isJackpot ? 'jackpot' : 'spin',
@@ -35,16 +34,14 @@ export class HistoryLog {
       });
     });
 
-    bridge.on('mode:changed', (data) => {
-      const d = data as { from: string; to: string };
+    bridge.on('mode:changed', (d) => {
       this.addEntry({
         eventType: 'mode_change',
         mode: d.to,
       });
     });
 
-    bridge.on('economy:purchase:result', (data) => {
-      const d = data as { success: boolean; balls: number };
+    bridge.on('economy:purchase:result', (d) => {
       if (!d.success) return;
       this.addEntry({
         eventType: 'purchase',

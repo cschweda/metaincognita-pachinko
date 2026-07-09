@@ -1,5 +1,3 @@
-import { bridge } from '../utils/bridge';
-
 export interface KakuhenConfig {
   kakuhenRate: number;         // Probability jackpot triggers kakuhen (e.g., 0.65)
   oddsMultiplier: number;      // Odds boost during kakuhen (e.g., 10)
