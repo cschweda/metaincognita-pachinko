@@ -1,4 +1,5 @@
 import { bridge } from '../utils/bridge';
+import { GameState } from '../types/state';
 
 /** Tracks per-spin data points for charts. */
 export interface DataPoint {
@@ -35,8 +36,7 @@ export class SessionTracker {
   }
 
   private subscribe(): void {
-    bridge.on('spin:result', (data) => {
-      const r = data as { isJackpot: boolean; reachType: string };
+    bridge.on('spin:result', (r) => {
       this.totalSpins++;
       if (r.isJackpot) {
         this.totalJackpots++;
@@ -56,15 +56,13 @@ export class SessionTracker {
       });
     });
 
-    bridge.on('economy:updated', (data) => {
-      const d = data as { ballsLaunched: number; ballsWon: number; ballsOwned: number };
+    bridge.on('economy:updated', (d) => {
       this.ballsLaunched = d.ballsLaunched;
       this.ballsWon = d.ballsWon;
       this.ballsOwned = d.ballsOwned;
     });
 
-    bridge.on('mode:changed', (data) => {
-      const d = data as { from: string; to: string };
+    bridge.on('mode:changed', (d) => {
       // Accumulate time in previous mode
       const now = Date.now();
       const elapsed = now - this.modeStartTime;
@@ -75,7 +73,7 @@ export class SessionTracker {
       this.currentMode = d.to;
 
       // Track fever chain endings
-      if (d.from === 'KAKUHEN' && d.to !== 'PAYOUT' && d.to !== 'SPINNING') {
+      if (d.from === GameState.KAKUHEN && d.to !== GameState.PAYOUT && d.to !== GameState.SPINNING) {
         // Fever ended
         if (this.currentChainLength > 0) {
           this.chainLengths.push(this.currentChainLength);

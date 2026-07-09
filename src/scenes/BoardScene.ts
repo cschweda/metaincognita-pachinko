@@ -118,8 +118,7 @@ export class BoardScene extends Phaser.Scene {
     this.stateMachine.start();
 
     // Listen for DOM events
-    bridge.on('settings:speed', (data) => {
-      const d = data as { gravity: number };
+    bridge.on('settings:speed', (d) => {
       this.matter.world.setGravity(0, d.gravity);
     });
 

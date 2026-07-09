@@ -1,6 +1,6 @@
 import type { BallEconomyState, SessionStats } from '../types/economy';
 import {
-  BALL_COST_YEN, BALL_EXCHANGE_YEN,
+  BALL_EXCHANGE_YEN,
   PURCHASE_BATCH_SIZE, PURCHASE_BATCH_COST,
   STARTING_BALANCE_YEN,
 } from '../types/economy';
