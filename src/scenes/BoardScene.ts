@@ -7,6 +7,7 @@ import { TulipGate } from '../gates/TulipGate';
 import { SidePocket } from '../gates/SidePocket';
 import { LotteryEngine } from '../lottery/LotteryEngine';
 import { LotteryDisplay } from '../lottery/LotteryDisplay';
+import { SpinCoordinator } from '../lottery/SpinCoordinator';
 import { GameStateMachine } from '../state/GameStateMachine';
 import { BallEconomy } from '../economy/BallEconomy';
 import { HeatmapTracker } from '../stats/HeatmapTracker';
@@ -16,8 +17,6 @@ import { PIN_RADIUS, BOARD_WIDTH, BOARD_HEIGHT } from '../utils/constants';
 import layoutData from '../layouts/default.json';
 import type { PinLayout } from '../types/layout';
 
-const PAYOUT_ROUNDS_FULL = 10;
-const PAYOUT_ROUNDS_KOATARI = 2;
 const PAYOUT_ROUND_DURATION_MS = 8000;   // 8 seconds per round
 const KOATARI_ROUND_DURATION_MS = 2000;  // 2 seconds for koatari rounds
 
@@ -34,6 +33,7 @@ export class BoardScene extends Phaser.Scene {
   private tulipGates: TulipGate[] = [];
   private lotteryEngine!: LotteryEngine;
   private lotteryDisplay!: LotteryDisplay;
+  private spinCoordinator!: SpinCoordinator;
   private stateMachine!: GameStateMachine;
   private economy!: BallEconomy;
   private heatmapTracker!: HeatmapTracker;
@@ -104,6 +104,16 @@ export class BoardScene extends Phaser.Scene {
     // 7. Heatmap tracker (Phaser overlay for ball paths)
     this.heatmapTracker = new HeatmapTracker(this);
 
+    // Spin lifecycle: queue on chakker entry, animate when allowed,
+    // record + resolve on animation completion
+    this.spinCoordinator = new SpinCoordinator(
+      this.lotteryEngine,
+      this.stateMachine,
+      this.lotteryDisplay,
+      this.economy,
+      (jackpotType) => this.startPayoutMode(jackpotType === 'koatari'),
+    );
+
     // Start the game
     this.stateMachine.start();
 
@@ -125,6 +135,10 @@ export class BoardScene extends Phaser.Scene {
     bridge.on('toggle:heatmap', () => {
       this.heatmapTracker.toggle();
     });
+
+    bridge.on('ball:lost', () => {
+      this.economy.lose();
+    });
   }
 
   // ---- Gate callbacks ----
@@ -133,45 +147,9 @@ export class BoardScene extends Phaser.Scene {
     // Award 3 balls per chakker entry (per spec)
     this.economy.awardChakkerPayout();
 
-    // Queue a lottery spin with current odds multiplier (10x during kakuhen)
-    const queued = this.lotteryEngine.queueSpin(this.stateMachine.getOddsMultiplier());
-
-    // Transition to SPINNING (works from NORMAL, KAKUHEN, or JITAN)
-    this.stateMachine.onChakkerEntry();
-
-    // If the display isn't currently animating, start the next spin
-    if (queued && !this.lotteryDisplay.isAnimating()) {
-      this.startNextSpin();
-    }
-  }
-
-  private startNextSpin(): void {
-    const result = this.lotteryEngine.dequeue();
-    if (!result) return;
-
-    bridge.emit({ type: 'spin:result', data: result });
-    this.economy.recordSpin(result.isJackpot, result.reachType !== 'none');
-
-    const speedMult = this.stateMachine.getAnimationSpeedMultiplier();
-    this.lotteryDisplay.startSpin(result, () => {
-      // Animation complete — resolve the spin
-      this.onSpinAnimationComplete(result.isJackpot, result.jackpotType);
-
-      // If more spins are queued, start the next one
-      if (this.lotteryEngine.getQueueLength() > 0 && !this.lotteryDisplay.isAnimating()) {
-        this.time.delayedCall(300, () => this.startNextSpin());
-      }
-    }, speedMult);
-  }
-
-  private onSpinAnimationComplete(isJackpot: boolean, jackpotType?: string): void {
-    if (isJackpot) {
-      const rounds = jackpotType === 'koatari' ? PAYOUT_ROUNDS_KOATARI : PAYOUT_ROUNDS_FULL;
-      this.stateMachine.onSpinResolved(true, rounds);
-      this.startPayoutMode(jackpotType === 'koatari');
-    } else {
-      this.stateMachine.onSpinResolved(false, 0);
-    }
+    // The RNG decides the outcome now; the coordinator animates it when
+    // the display is free and the mode allows (never during payout)
+    this.spinCoordinator.queueSpin();
   }
 
   private startPayoutMode(isKoatari: boolean): void {
@@ -355,10 +333,8 @@ export class BoardScene extends Phaser.Scene {
     // Payout round timer
     this.updatePayoutMode(delta);
 
-    // Check if queued spins need animating
-    if (this.lotteryEngine.getQueueLength() > 0 && !this.lotteryDisplay.isAnimating()) {
-      this.startNextSpin();
-    }
+    // Drain the spin reserve queue when a spin may start
+    this.spinCoordinator.update();
 
     // FPS tracking + stats push (once per second)
     this.fpsCounter++;

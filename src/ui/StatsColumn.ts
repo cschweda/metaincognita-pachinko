@@ -62,27 +62,28 @@ export class StatsColumn {
       this.update();
     });
 
+    // RNG transparency: reveal the predetermined outcome as the reels
+    // begin to spin. The result card and spin log update on spin:result
+    // (animation completion) so the default UI never spoils a live spin.
+    bridge.on('spin:started', (data) => {
+      if (!this.rngTransparency) return;
+      const rngEl = this.container.querySelector('#rng-preview') as HTMLElement | null;
+      if (!rngEl) return;
+      rngEl.style.display = 'block';
+      const r = data as SpinResult;
+      if (r.isJackpot) {
+        rngEl.innerHTML = `<span class="rng-jackpot">Next: JACKPOT (${r.jackpotType})</span>`;
+      } else if (r.reachType !== 'none') {
+        rngEl.innerHTML = `<span class="rng-reach">Next: NO JACKPOT (${r.reachType} reach)</span>`;
+      } else {
+        rngEl.innerHTML = `<span class="rng-miss">Next: NO JACKPOT</span>`;
+      }
+    });
+
     bridge.on('spin:result', (data) => {
       this.lastSpinResult = data as SpinResult;
       this.spinLog.unshift(this.lastSpinResult);
       if (this.spinLog.length > 10) this.spinLog.pop();
-
-      // RNG transparency: show predetermined outcome
-      if (this.rngTransparency) {
-        const rngEl = this.container.querySelector('#rng-preview') as HTMLElement | null;
-        if (rngEl) {
-          rngEl.style.display = 'block';
-          const r = this.lastSpinResult;
-          if (r.isJackpot) {
-            rngEl.innerHTML = `<span class="rng-jackpot">Next: JACKPOT (${r.jackpotType})</span>`;
-          } else if (r.reachType !== 'none') {
-            rngEl.innerHTML = `<span class="rng-reach">Next: NO JACKPOT (${r.reachType} reach)</span>`;
-          } else {
-            rngEl.innerHTML = `<span class="rng-miss">Next: NO JACKPOT</span>`;
-          }
-        }
-      }
-
       this.update();
     });
 

@@ -43,10 +43,12 @@ export class HistoryLog {
       });
     });
 
-    bridge.on('economy:purchase', () => {
+    bridge.on('economy:purchase:result', (data) => {
+      const d = data as { success: boolean; balls: number };
+      if (!d.success) return;
       this.addEntry({
         eventType: 'purchase',
-        ballsWon: 250,
+        ballsWon: d.balls,
       });
     });
   }

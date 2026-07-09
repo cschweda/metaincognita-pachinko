@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { DEAD_ZONE_THRESHOLD, DIAL_MAX_ROTATION } from '../../src/utils/constants';
+import { LauncherDial } from '../../src/input/LauncherDial';
 
 describe('LauncherDial constants', () => {
   it('dead zone threshold is 20%', () => {
@@ -30,5 +31,19 @@ describe('LauncherDial constants', () => {
   it('power above dead zone should fire', () => {
     const power = 0.25;
     expect(power > DEAD_ZONE_THRESHOLD).toBe(true);
+  });
+});
+
+describe('LauncherDial wheel direction', () => {
+  it('scroll down (positive deltaY) decreases power', () => {
+    expect(LauncherDial.wheelPowerStep(100)).toBeLessThan(0);
+  });
+
+  it('scroll up (negative deltaY) increases power', () => {
+    expect(LauncherDial.wheelPowerStep(-100)).toBeGreaterThan(0);
+  });
+
+  it('no vertical scroll means no power change', () => {
+    expect(LauncherDial.wheelPowerStep(0)).toBe(0);
   });
 });

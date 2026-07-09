@@ -1,5 +1,6 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { BallEconomy } from '../../src/economy/BallEconomy';
+import { bridge } from '../../src/utils/bridge';
 
 describe('BallEconomy', () => {
   it('starts with 250 balls', () => {
@@ -58,6 +59,38 @@ describe('BallEconomy', () => {
     // Lose them all
     for (let i = 0; i < 250; i++) eco.lose();
     expect(eco.isExhausted()).toBe(true);
+  });
+
+  describe('purchase result event', () => {
+    const received: { success: boolean; balls: number }[] = [];
+    const listener = (data?: unknown) => {
+      received.push(data as { success: boolean; balls: number });
+    };
+
+    afterEach(() => {
+      bridge.off('economy:purchase:result', listener);
+      received.length = 0;
+    });
+
+    it('emits success with ball count on a successful purchase', () => {
+      const eco = new BallEconomy();
+      bridge.on('economy:purchase:result', listener);
+
+      expect(eco.purchaseBalls()).toBe(true);
+      expect(received).toEqual([{ success: true, balls: 250 }]);
+    });
+
+    it('emits failure when the balance is insufficient', () => {
+      const eco = new BallEconomy();
+      // Starting ¥10,000 minus the automatic first batch leaves 9 purchases
+      for (let i = 0; i < 9; i++) {
+        expect(eco.purchaseBalls()).toBe(true);
+      }
+      bridge.on('economy:purchase:result', listener);
+
+      expect(eco.purchaseBalls()).toBe(false);
+      expect(received).toEqual([{ success: false, balls: 0 }]);
+    });
   });
 
   it('accounting is exact over many operations', () => {

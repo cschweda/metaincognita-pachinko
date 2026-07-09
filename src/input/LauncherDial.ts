@@ -23,6 +23,13 @@ export class LauncherDial {
   private lastDialAdjustTime = 0;
   private static readonly DIAL_STEP = 0.004;
   private static readonly DIAL_THROTTLE_MS = 30;
+  private static readonly WHEEL_STEP = 0.02;
+
+  /** Wheel scroll → dial power step. Scroll up (deltaY < 0) increases power. */
+  static wheelPowerStep(deltaY: number): number {
+    if (deltaY === 0) return 0;
+    return deltaY > 0 ? -LauncherDial.WHEEL_STEP : LauncherDial.WHEEL_STEP;
+  }
 
   // Keyboard state
   private spaceKey: Phaser.Input.Keyboard.Key | null = null;
@@ -59,9 +66,11 @@ export class LauncherDial {
       this.dragging = false;
     });
 
-    this.scene.input.on('wheel', (_pointer: Phaser.Input.Pointer, _gx: number, _gy: number, _gz: number, event: WheelEvent) => {
-      const delta = event.deltaY > 0 ? -0.02 : 0.02;
-      this.power = Math.max(0, Math.min(1, this.power + delta));
+    // Phaser wheel event args: (pointer, currentlyOver, deltaX, deltaY, deltaZ)
+    this.scene.input.on('wheel', (_pointer: Phaser.Input.Pointer, _over: unknown[], _deltaX: number, deltaY: number) => {
+      const step = LauncherDial.wheelPowerStep(deltaY);
+      if (step === 0) return;
+      this.power = Math.max(0, Math.min(1, this.power + step));
       bridge.emit({ type: 'dial:changed', data: { power: this.power } });
     });
 
@@ -134,10 +143,9 @@ export class LauncherDial {
     const vx = (Math.random() - 0.5) * 2 + angleJitter * speed * 0.3;
     const vy = speed * 0.2 * speedJitter;
 
-    // Use economy if available
-    if (this.economy) {
-      if (!this.economy.launch()) return;
-    }
+    // Don't deduct a ball the pool can't physically spawn
+    if (!this.ballPool.hasCapacity()) return;
+    if (this.economy && !this.economy.launch()) return;
 
     const ball = this.ballPool.spawn(spawnX, spawnY, vx, vy);
     if (ball) {

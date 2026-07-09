@@ -22,6 +22,11 @@ export class SidePocket {
     this.onBallEntry = onBallEntry;
     this.graphics = scene.add.graphics();
 
+    // Label must be unique per pocket — every pocket listens on the shared
+    // collision event, and a shared label would fire all of them at once
+    // (double-paying minor pockets)
+    const label = `sidePocket_${pocketType}_${x}_${y}`;
+
     // Sensor body
     scene.matter.add.rectangle(x + width / 2, y + height / 2, width, height, {
       isStatic: true,
@@ -30,7 +35,7 @@ export class SidePocket {
         category: CATEGORY_SENSOR,
         mask: CATEGORY_BALL,
       },
-      label: `sidePocket_${pocketType}`,
+      label,
     });
 
     // Draw static appearance
@@ -40,11 +45,10 @@ export class SidePocket {
     this.graphics.lineStyle(1, color, 0.5);
     this.graphics.strokeRect(x, y, width, height);
 
-    this.setupCollision(pocketType);
+    this.setupCollision(label);
   }
 
-  private setupCollision(pocketType: PocketType): void {
-    const label = `sidePocket_${pocketType}`;
+  private setupCollision(label: string): void {
     this.scene.matter.world.on('collisionstart', (event: Phaser.Physics.Matter.Events.CollisionStartEvent) => {
       for (const pair of event.pairs) {
         const labels = [pair.bodyA.label, pair.bodyB.label];

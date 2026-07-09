@@ -5,6 +5,7 @@ export type GameEvent =
   | { type: 'ball:launched' }
   | { type: 'ball:lost' }
   | { type: 'ball:chakker' }
+  | { type: 'spin:started'; data: unknown }
   | { type: 'spin:result'; data: unknown }
   | { type: 'mode:changed'; data: { from: string; to: string } }
   | { type: 'payout:round'; data: { round: number; total: number; balls: number } }
@@ -16,6 +17,7 @@ export type GameEvent =
   | { type: 'economy:ballsRemaining'; data: { remaining: number } }
   | { type: 'settings:speed'; data: { gravity: number } }
   | { type: 'economy:purchase' }
+  | { type: 'economy:purchase:result'; data: { success: boolean; balls: number } }
   | { type: 'economy:cashout' }
   | { type: 'economy:cashout:result'; data: { value: number } }
   | { type: 'stats:updated'; data: unknown }

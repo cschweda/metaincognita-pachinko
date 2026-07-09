@@ -14,17 +14,17 @@ describe('GameStateMachine', () => {
     expect(sm.getState()).toBe(GameState.NORMAL);
   });
 
-  it('transitions NORMAL → SPINNING on chakker entry', () => {
+  it('transitions NORMAL → SPINNING when a spin starts', () => {
     const sm = new GameStateMachine();
     sm.start();
-    sm.onChakkerEntry();
+    sm.onSpinStart();
     expect(sm.getState()).toBe(GameState.SPINNING);
   });
 
   it('transitions SPINNING → PAYOUT on jackpot', () => {
     const sm = new GameStateMachine();
     sm.start();
-    sm.onChakkerEntry();
+    sm.onSpinStart();
     sm.onSpinResolved(true, 10);
     expect(sm.getState()).toBe(GameState.PAYOUT);
   });
@@ -32,7 +32,7 @@ describe('GameStateMachine', () => {
   it('transitions SPINNING → NORMAL on non-jackpot (from normal mode)', () => {
     const sm = new GameStateMachine();
     sm.start();
-    sm.onChakkerEntry();
+    sm.onSpinStart();
     sm.onSpinResolved(false, 0);
     expect(sm.getState()).toBe(GameState.NORMAL);
   });
@@ -40,7 +40,7 @@ describe('GameStateMachine', () => {
   it('transitions PAYOUT → KAKUHEN or JITAN after all rounds', () => {
     const sm = new GameStateMachine();
     sm.start();
-    sm.onChakkerEntry();
+    sm.onSpinStart();
     sm.onSpinResolved(true, 2);
     expect(sm.getState()).toBe(GameState.PAYOUT);
 
@@ -53,33 +53,32 @@ describe('GameStateMachine', () => {
     expect([GameState.KAKUHEN, GameState.JITAN]).toContain(state);
   });
 
-  it('KAKUHEN allows chakker entry and spinning at boosted odds', () => {
-    const sm = new GameStateMachine();
+  it('KAKUHEN allows spins at boosted odds', () => {
+    // kakuhenRate 1 → every jackpot triggers fever (deterministic)
+    const sm = new GameStateMachine({ kakuhenRate: 1, oddsMultiplier: 10, spinLimit: 100 });
     sm.start();
-    sm.onChakkerEntry();
+    sm.onSpinStart();
     sm.onSpinResolved(true, 1);
     sm.completePayoutRound();
 
-    // Force to KAKUHEN by checking state
-    if (sm.getState() === GameState.KAKUHEN) {
-      expect(sm.getOddsMultiplier()).toBe(10);
-      sm.onChakkerEntry();
-      expect(sm.getState()).toBe(GameState.SPINNING);
-    }
+    expect(sm.getState()).toBe(GameState.KAKUHEN);
+    expect(sm.getOddsMultiplier()).toBe(10);
+    sm.onSpinStart();
+    expect(sm.getState()).toBe(GameState.SPINNING);
   });
 
-  it('JITAN allows chakker entry', () => {
-    const sm = new GameStateMachine();
+  it('JITAN allows spins at accelerated animation speed', () => {
+    // kakuhenRate 0 → jackpot never triggers fever, always falls to jitan
+    const sm = new GameStateMachine({ kakuhenRate: 0, oddsMultiplier: 10, spinLimit: 100 });
     sm.start();
-    sm.onChakkerEntry();
+    sm.onSpinStart();
     sm.onSpinResolved(true, 1);
     sm.completePayoutRound();
 
-    if (sm.getState() === GameState.JITAN) {
-      sm.onChakkerEntry();
-      expect(sm.getState()).toBe(GameState.SPINNING);
-      expect(sm.getAnimationSpeedMultiplier()).toBeGreaterThan(1);
-    }
+    expect(sm.getState()).toBe(GameState.JITAN);
+    expect(sm.getAnimationSpeedMultiplier()).toBeGreaterThan(1);
+    sm.onSpinStart();
+    expect(sm.getState()).toBe(GameState.SPINNING);
   });
 
   it('rejects invalid transitions', () => {
@@ -92,34 +91,132 @@ describe('GameStateMachine', () => {
   it('forceIdle works from any state and deactivates modes', () => {
     const sm = new GameStateMachine();
     sm.start();
-    sm.onChakkerEntry();
+    sm.onSpinStart();
     sm.forceIdle();
     expect(sm.getState()).toBe(GameState.IDLE);
     expect(sm.getOddsMultiplier()).toBe(1);
   });
 
-  it('full cycle: NORMAL → jackpot → PAYOUT → mode → back to NORMAL eventually', () => {
-    const sm = new GameStateMachine();
+  it('full cycle: NORMAL → jackpot → PAYOUT → JITAN → back to NORMAL', () => {
+    const sm = new GameStateMachine({ kakuhenRate: 0, oddsMultiplier: 10, spinLimit: 100 });
     sm.start();
 
     // Hit a jackpot
-    sm.onChakkerEntry();
+    sm.onSpinStart();
     sm.onSpinResolved(true, 1);
     expect(sm.getState()).toBe(GameState.PAYOUT);
 
-    // Complete payout
+    // Complete payout — kakuhenRate 0 means always JITAN
     sm.completePayoutRound();
-    const modeState = sm.getState();
-    expect([GameState.KAKUHEN, GameState.JITAN]).toContain(modeState);
+    expect(sm.getState()).toBe(GameState.JITAN);
 
-    // If JITAN, exhaust all spins to get back to NORMAL
-    if (modeState === GameState.JITAN) {
-      const jitan = sm.getJitanController();
-      while (jitan.getSpinsRemaining() > 0) {
-        sm.onChakkerEntry();
-        sm.onSpinResolved(false, 0);
-      }
-      expect(sm.getState()).toBe(GameState.NORMAL);
+    // Exhaust all jitan spins to get back to NORMAL
+    const jitan = sm.getJitanController();
+    while (jitan.getSpinsRemaining() > 0) {
+      sm.onSpinStart();
+      sm.onSpinResolved(false, 0);
     }
+    expect(sm.getState()).toBe(GameState.NORMAL);
+  });
+});
+
+describe('GameStateMachine spin lifecycle (queued spins)', () => {
+  it('onSpinStart returns true from NORMAL', () => {
+    const sm = new GameStateMachine();
+    sm.start();
+    expect(sm.onSpinStart()).toBe(true);
+    expect(sm.getState()).toBe(GameState.SPINNING);
+  });
+
+  it('onSpinStart returns false in IDLE', () => {
+    const sm = new GameStateMachine();
+    expect(sm.onSpinStart()).toBe(false);
+    expect(sm.getState()).toBe(GameState.IDLE);
+  });
+
+  it('onSpinStart returns false while already SPINNING', () => {
+    const sm = new GameStateMachine();
+    sm.start();
+    sm.onSpinStart();
+    expect(sm.onSpinStart()).toBe(false);
+    expect(sm.getState()).toBe(GameState.SPINNING);
+  });
+
+  it('onSpinStart returns false during PAYOUT — queued spins hold until payout completes', () => {
+    const sm = new GameStateMachine();
+    sm.start();
+    sm.onSpinStart();
+    sm.onSpinResolved(true, 10);
+    expect(sm.getState()).toBe(GameState.PAYOUT);
+
+    expect(sm.onSpinStart()).toBe(false);
+    expect(sm.getState()).toBe(GameState.PAYOUT);
+  });
+
+  it('a queued spin that resolves as a jackpot enters PAYOUT (regression: queued jackpots were dropped)', () => {
+    const sm = new GameStateMachine();
+    sm.start();
+
+    // First spin misses and returns to NORMAL
+    expect(sm.onSpinStart()).toBe(true);
+    sm.onSpinResolved(false, 0);
+    expect(sm.getState()).toBe(GameState.NORMAL);
+
+    // Second (queued) spin starts and hits — must reach PAYOUT
+    expect(sm.onSpinStart()).toBe(true);
+    sm.onSpinResolved(true, 10);
+    expect(sm.getState()).toBe(GameState.PAYOUT);
+  });
+
+  it('consumes exactly one kakuhen spin per started spin, including queued spins', () => {
+    const sm = new GameStateMachine({ kakuhenRate: 1, oddsMultiplier: 10, spinLimit: 100 });
+    sm.start();
+    sm.onSpinStart();
+    sm.onSpinResolved(true, 1);
+    sm.completePayoutRound();
+    expect(sm.getState()).toBe(GameState.KAKUHEN);
+
+    const kakuhen = sm.getKakuhenController();
+    expect(kakuhen.getSpinsRemaining()).toBe(100);
+
+    sm.onSpinStart();
+    expect(kakuhen.getSpinsRemaining()).toBe(99);
+    sm.onSpinResolved(false, 0);
+    expect(sm.getState()).toBe(GameState.KAKUHEN);
+
+    // A queued spin starting from KAKUHEN consumes too
+    sm.onSpinStart();
+    expect(kakuhen.getSpinsRemaining()).toBe(98);
+  });
+
+  it('falls to JITAN when kakuhen spins are exhausted', () => {
+    const sm = new GameStateMachine({ kakuhenRate: 1, oddsMultiplier: 10, spinLimit: 2 });
+    sm.start();
+    sm.onSpinStart();
+    sm.onSpinResolved(true, 1);
+    sm.completePayoutRound();
+    expect(sm.getState()).toBe(GameState.KAKUHEN);
+
+    sm.onSpinStart();
+    sm.onSpinResolved(false, 0); // 1 spin left
+    expect(sm.getState()).toBe(GameState.KAKUHEN);
+
+    sm.onSpinStart();
+    sm.onSpinResolved(false, 0); // exhausted → JITAN
+    expect(sm.getState()).toBe(GameState.JITAN);
+  });
+
+  it('consumes one jitan spin per started spin', () => {
+    const sm = new GameStateMachine({ kakuhenRate: 0, oddsMultiplier: 10, spinLimit: 100 });
+    sm.start();
+    sm.onSpinStart();
+    sm.onSpinResolved(true, 1);
+    sm.completePayoutRound();
+    expect(sm.getState()).toBe(GameState.JITAN);
+
+    const jitan = sm.getJitanController();
+    const before = jitan.getSpinsRemaining();
+    sm.onSpinStart();
+    expect(jitan.getSpinsRemaining()).toBe(before - 1);
   });
 });
