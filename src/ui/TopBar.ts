@@ -1,8 +1,11 @@
+import { hubExitHtml } from './HubExit';
+
 type TabName = 'game' | 'history' | 'analysis';
 
 export class TopBar {
   private container: HTMLElement;
   private onNavigate: (view: string) => void;
+  private tabsEl!: HTMLElement;
 
   constructor(container: HTMLElement, onNavigate: (view: string) => void) {
     this.container = container;
@@ -11,20 +14,26 @@ export class TopBar {
   }
 
   private render(): void {
+    // The bar itself is persistent chrome and has no show()/hide(): it must be
+    // on screen for every view, because the hub exit lives in it and a player
+    // has to be able to leave from anywhere — including the setup screen, where
+    // this bar used to be hidden entirely. Only the TABS come and go.
     this.container.innerHTML = `
       <div class="top-bar-inner">
         <div class="top-bar-brand">
-          <span class="brand-name">Metaincognita</span>
-          <span class="brand-separator">/</span>
+          ${hubExitHtml()}
+          <span class="top-bar-divider" aria-hidden="true"></span>
           <span class="brand-game">PachinkoParlor</span>
         </div>
-        <nav class="top-bar-tabs">
+        <nav class="top-bar-tabs" aria-label="Pages">
           <button class="tab-btn" data-tab="game">Game</button>
           <button class="tab-btn" data-tab="history">History</button>
           <button class="tab-btn" data-tab="analysis">Analysis</button>
         </nav>
       </div>
     `;
+
+    this.tabsEl = this.container.querySelector('.top-bar-tabs') as HTMLElement;
 
     this.container.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -43,11 +52,12 @@ export class TopBar {
     });
   }
 
-  show(): void {
-    this.container.style.display = 'block';
+  /** Tabs are for a session in progress; the setup screen has nowhere to go yet. */
+  showTabs(): void {
+    this.tabsEl.style.display = 'flex';
   }
 
-  hide(): void {
-    this.container.style.display = 'none';
+  hideTabs(): void {
+    this.tabsEl.style.display = 'none';
   }
 }

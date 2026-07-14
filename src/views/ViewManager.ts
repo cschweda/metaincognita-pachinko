@@ -53,26 +53,29 @@ export class ViewManager {
     this.historyView.hide();
     this.analysisView.hide();
 
+    // The top bar itself is never hidden — it carries the hub exit, which has to
+    // be reachable from every view. Only the tabs come and go: on setup there is
+    // no session yet, so there is nowhere for them to navigate to.
     switch (name) {
       case 'setup':
         this.setupView.show();
         this.topBar.setActiveTab(null);
-        this.topBar.hide();
+        this.topBar.hideTabs();
         break;
       case 'game':
         this.gameView.show();
         this.topBar.setActiveTab('game');
-        this.topBar.show();
+        this.topBar.showTabs();
         break;
       case 'history':
         this.historyView.show();
         this.topBar.setActiveTab('history');
-        this.topBar.show();
+        this.topBar.showTabs();
         break;
       case 'analysis':
         this.analysisView.show();
         this.topBar.setActiveTab('analysis');
-        this.topBar.show();
+        this.topBar.showTabs();
         break;
     }
   }

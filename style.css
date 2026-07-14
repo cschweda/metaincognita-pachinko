@@ -73,13 +73,16 @@ main {
   min-height: 0; /* Allow flex child to shrink below content size */
 }
 
-#view-game {
+#view-game,
+#view-setup {
   height: 100%;
 }
 
 /* ---- Setup Screen ---- */
 .setup-screen {
-  height: 100vh;
+  /* 100% of <main>, not 100vh: the top bar is now on this view too, so a
+     viewport-height setup screen would overflow it and clip the disclaimer. */
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -166,6 +169,10 @@ main {
   background: var(--bg-panel);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+  /* Height lives here, not on .top-bar-inner, so the bar reserves its space
+     before TopBar renders into it — otherwise the whole app shifts down 44px
+     on first paint. */
+  height: 44px;
 }
 
 .top-bar-inner {
@@ -173,27 +180,69 @@ main {
   align-items: center;
   justify-content: space-between;
   padding: 0 1rem;
-  height: 44px;
+  height: 100%;
 }
 
 .top-bar-brand {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.6rem;
   font-size: 0.85rem;
-}
-
-.brand-name {
-  color: var(--text-dim);
-}
-
-.brand-separator {
-  color: var(--text-muted);
 }
 
 .brand-game {
   color: var(--gold);
   font-weight: 600;
+}
+
+.top-bar-divider {
+  width: 1px;
+  height: 1rem;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+/* ---- Hub exit — suite chrome (see src/ui/HubExit.ts) ----
+   Deliberately NOT var(--gold) (#ffd700, this game's accent). The exit is the
+   same gold in all nine Metaincognita apps so a player learns it once and finds
+   it everywhere. 7.8:1 on --bg-panel, so the 10px wordmark clears AA. */
+.hub-exit {
+  --hub-gold: #d4a847;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.2rem 0.5rem;
+  border: 1px solid rgba(212, 168, 71, 0.35);
+  border-radius: var(--radius-sm);
+  background: rgba(212, 168, 71, 0.06);
+  color: var(--hub-gold);
+  text-decoration: none;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.hub-exit:hover {
+  border-color: rgba(212, 168, 71, 0.7);
+  background: rgba(212, 168, 71, 0.14);
+  color: #e2bd6a;
+}
+
+.hub-exit:focus-visible {
+  outline: 2px solid var(--hub-gold);
+  outline-offset: 2px;
+}
+
+.hub-exit-icon {
+  width: 0.875rem;
+  height: 0.875rem;
+  flex-shrink: 0;
+}
+
+.hub-exit-word {
+  font-size: 0.625rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .top-bar-tabs {
@@ -967,5 +1016,19 @@ main {
   }
   .stats-column {
     display: none; /* Phase 5 will add a mobile drawer */
+  }
+}
+
+/* The bar runs out of room around 448px — it already did before the hub exit,
+   which pushed "Analysis" off the edge for good (body is overflow:hidden, so
+   there is no scrolling to it). Something has to give, and it is the game name:
+   it is decoration, it is in the page title, and it is the h1 on the setup
+   screen. The tabs are navigation and the exit is the way out, so both stay —
+   the exit in particular never degrades to icon-only, since being findable is
+   the entire point of it. */
+@media (max-width: 560px) {
+  .brand-game,
+  .top-bar-divider {
+    display: none;
   }
 }

@@ -14,7 +14,9 @@
 </head>
 <body>
   <div id="app">
-    <header id="top-bar" style="display: none;"></header>
+    <!-- Persistent chrome: carries the hub exit, so it is never hidden. CSS
+         reserves its height so it does not shift when TopBar fills it. -->
+    <header id="top-bar"></header>
 
     <main>
       <section id="view-setup"></section>
