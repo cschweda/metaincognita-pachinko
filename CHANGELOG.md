@@ -2,6 +2,12 @@
 
 All notable changes to PachinkoParlor are documented here.
 
+## [Unreleased]
+
+### Added
+
+- **The hub exit — a way back to the floor.** A gold **METAINCOGNITA** wordmark now sits at the far left of the top status bar on every route, linking to [metaincognita.com](https://metaincognita.com) — the floor where all nine Metaincognita games live. Until now the hub linked out to every game and not one of them linked home; a player deep in a session had no way back but the browser's back button. It is a real `<a href>`, opens in the **same tab** (an exit, not a side trip), is never hidden or gated, and **never confirms** — it destroys nothing, and the point is that you can always leave. Suite chrome, per METAINCOGNITA-GUIDELINES v1.2 §5.
+
 ## [0.4.1] - 2026-07-09
 
 ### Spin Lifecycle & Stats Wiring Fixes
